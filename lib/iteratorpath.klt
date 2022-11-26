@@ -1,0 +1,6 @@
+%ifndef iterator_t
+%define iterator_t
+
+TYPE
+
+%endif --iterator_t

@@ -1,0 +1,26 @@
+{
+  "manver" : "1",
+  "project" : "iterator",
+  "description" : "Interface for dealing with iterators",
+  "version" : "0.0.1",
+  "license" : "MIT",
+  "author" : "kobbled",
+  "includes" : [
+    "lib"
+  ],
+  "tests-includes" :[
+    "test/config"
+  ],
+  "tests" : [
+    "test/test_itr.kl"
+  ],
+  "depends" : [
+    "ktransw-macros",
+    "errors",
+    "systemlib",
+    "KUnit"
+  ],
+  "tests-depends" : [
+    "pose"
+  ]
+}

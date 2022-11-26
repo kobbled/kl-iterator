@@ -1,0 +1,191 @@
+PROGRAM test_itr
+%NOLOCKGROUP
+
+%include systemlib.types.klt
+%include systemvars.klt
+
+%include kunit.klh
+%from pose.klh %import set_config
+
+--tsp object
+%class tstiti('iteratorpath.klc','iteratorpath.klh','default_int_path.klt')
+%class tstiph('iteratorpath.klc','iteratorpath.klh','default_path_path.klt')
+
+ROUTINE t_is_empty : BOOLEAN
+  BEGIN
+    tstiti__new
+    RETURN(kunit_assert(tstiti__is_empty))
+  END t_is_empty
+
+ROUTINE t_iter_pop : BOOLEAN
+  VAR
+    except : ARRAY[5] OF t_INTEGER
+    actual : ARRAY[5] OF t_INTEGER
+  BEGIN
+    except[1].v = 5; except[2].v = 10; except[3].v = 23; except[4].v = 1; except[5].v = 100
+
+
+    tstiti__new
+    --build
+    tstiti__push(except[1])
+    tstiti__push(except[2])
+    tstiti__push(except[3])
+    tstiti__push(except[4])
+    tstiti__push(except[5])
+    
+    actual[1] = tstiti__pop
+    actual[2] = tstiti__pop
+    actual[3] = tstiti__pop
+    actual[4] = tstiti__pop
+    actual[5] = tstiti__pop
+
+    RETURN(kunit_eq_int(100, tstiti__unwrap_from(actual[1])) AND kunit_eq_int(1, tstiti__unwrap_from(actual[2])) AND &
+           kunit_eq_int(23, tstiti__unwrap_from(actual[3])) AND kunit_eq_int(10, tstiti__unwrap_from(actual[4])) AND &
+           kunit_eq_int(5, tstiti__unwrap_from(actual[5])) )
+  END t_iter_pop
+
+ROUTINE t_iter_next : BOOLEAN
+  VAR
+    except : ARRAY[5] OF t_INTEGER
+    actual : ARRAY[5] OF t_INTEGER
+    nde : t_INTEGER
+    i : INTEGER
+  BEGIN
+    except[1].v = 5; except[2].v = 10; except[3].v = 23; except[4].v = 1; except[5].v = 100
+
+    tstiti__new
+    --build
+    tstiti__push(except[1])
+    tstiti__push(except[2])
+    tstiti__push(except[3])
+    tstiti__push(except[4])
+    tstiti__push(except[5])
+
+    i = 1
+    REPEAT
+      nde = tstiti__next
+      IF NOT tstiti__is_null THEN
+        actual[i] = nde
+        i = i + 1
+      ENDIF
+    UNTIL(tstiti__is_null)
+
+    RETURN(kunit_eq_int(5, tstiti__unwrap_from(actual[1])) AND kunit_eq_int(10, tstiti__unwrap_from(actual[2])) AND &
+           kunit_eq_int(23, tstiti__unwrap_from(actual[3])) AND kunit_eq_int(1, tstiti__unwrap_from(actual[4])) AND &
+           kunit_eq_int(100, tstiti__unwrap_from(actual[5])) )
+  END t_iter_next
+
+ROUTINE t_iter_prev : BOOLEAN
+  VAR
+    except : ARRAY[5] OF t_INTEGER
+    actual : ARRAY[5] OF t_INTEGER
+    nde : t_INTEGER
+    i : INTEGER
+  BEGIN
+    except[1].v = 5; except[2].v = 10; except[3].v = 23; except[4].v = 1; except[5].v = 100
+
+    tstiti__new
+    --build
+    tstiti__push(except[1])
+    tstiti__push(except[2])
+    tstiti__push(except[3])
+    tstiti__push(except[4])
+    tstiti__push(except[5])
+
+    --set to end
+    tstiti__set_index(-1)
+
+    i = 1
+    REPEAT
+      nde = tstiti__prev
+      IF NOT tstiti__is_null THEN
+        actual[i] = nde
+        i = i + 1
+      ENDIF
+    UNTIL(tstiti__is_null)
+
+    RETURN(kunit_eq_int(100, tstiti__unwrap_from(actual[1])) AND kunit_eq_int(1, tstiti__unwrap_from(actual[2])) AND &
+           kunit_eq_int(23, tstiti__unwrap_from(actual[3])) AND kunit_eq_int(10, tstiti__unwrap_from(actual[4])) AND &
+           kunit_eq_int(5, tstiti__unwrap_from(actual[5])) )
+  END t_iter_prev
+
+ROUTINE t_get_set : BOOLEAN
+  VAR
+    except : ARRAY[5] OF t_INTEGER
+    actual : ARRAY[5] OF t_INTEGER
+    i : INTEGER
+  BEGIN
+    except[1].v = 5; except[2].v = 10; except[3].v = 23; except[4].v = 1; except[5].v = 100
+
+    tstiti__new
+    --build
+    tstiti__push(except[1])
+    tstiti__push(except[2])
+    tstiti__push(except[3])
+    tstiti__push(except[4])
+    tstiti__push(except[5])
+
+    --set to end
+    tstiti__set_index(-1)
+    actual[1] = tstiti__get
+    tstiti__set_index(-2)
+    actual[2] = tstiti__get
+    tstiti__set_index(1)
+    actual[3] = tstiti__get
+    tstiti__set_index(3)
+    actual[4] = tstiti__get
+    actual[5] = tstiti__get_index(2)
+
+    RETURN(kunit_eq_int(100, tstiti__unwrap_from(actual[1])) AND kunit_eq_int(1, tstiti__unwrap_from(actual[2])) AND &
+           kunit_eq_int(5, tstiti__unwrap_from(actual[3])) AND kunit_eq_int(23, tstiti__unwrap_from(actual[4])) AND & 
+           kunit_eq_int(10, tstiti__unwrap_from(actual[5])) )
+  END t_get_set
+
+
+ROUTINE t_it_path : BOOLEAN
+  VAR
+    except : ARRAY[5] OF XYZWPR
+    actual : ARRAY[5] OF XYZWPR
+    nde : XYZWPR
+    i : INTEGER
+  BEGIN
+    except[1] = POS(0,80,0,0,0,0,(ZEROPOS(1).Config_data))
+    except[2] = POS(48,64,10,0,0,0,(ZEROPOS(1).Config_data))
+    except[3] = POS(77,21,20,0,0,0,(ZEROPOS(1).Config_data))
+    except[4] = POS(74,31,30,0,0,0,(ZEROPOS(1).Config_data))
+    except[5] = POS(39,-70,40,0,0,0,(ZEROPOS(1).Config_data))
+
+    tstiph__new
+    --build
+    tstiph__wrap(except[1])
+    tstiph__wrap(except[2])
+    tstiph__wrap(except[3])
+    tstiph__wrap(except[4])
+    tstiph__wrap(except[5])
+
+    i = 1
+    REPEAT
+      nde = tstiph__unwrap_next
+      IF NOT tstiph__is_null THEN
+        actual[i] = nde
+        i = i + 1
+      ENDIF
+    UNTIL(tstiph__is_null)
+    
+    RETURN(kunit_eq_arp(except, actual))
+  END t_it_path
+
+BEGIN
+  kunit_test('test is empty', t_is_empty)
+  kunit_test('test pop', t_iter_pop)
+  kunit_test('test next', t_iter_next)
+  kunit_test('test prev', t_iter_prev)
+  kunit_test('test get & set', t_get_set)
+  kunit_test('test path iterator', t_it_path)
+
+  --clean up
+  -- tstiti__delete
+  -- tstiph__delete
+
+  kunit_done
+END test_itr

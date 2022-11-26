@@ -1,0 +1,231 @@
+PROGRAM class_name
+%NOBUSYLAMP
+%COMMENT = 'iterator class'
+%NOLOCKGROUP
+%NOPAUSE = COMMAND + TPENABLE + ERROR
+
+%defeval BASE_CLASSNAME class_name
+
+%include systemvars.klt
+%include systemlib.macros.klt
+--include atomic types
+%include systemlib.types.klt
+
+%include errors.klt
+
+%defeval class_name BASE_CLASSNAME
+
+VAR
+  this : PATH nodedata = ITR_TYPE
+  nde :  ITR_TYPE
+  index : INTEGER
+
+--includes
+%include errors.klh
+
+--include template specific imports
+define_itr_private_headers
+
+%defeval class_name BASE_CLASSNAME
+
+-- iterator class members
+%include iteratorpath.klh
+
+-- **** DEFINED TEMPLATES
+  -- private template members
+define_null_type(class_name)
+  -- public template members
+define_is_null(class_name)
+define_unwrap_pop(class_name)
+define_unwrap_next(class_name)
+define_unwrap_from(class_name)
+define_unwrap(class_name)
+define_wrap(class_name)
+
+--private
+
+ROUTINE clear_
+  VAR
+    i : INTEGER
+    status : INTEGER
+  BEGIN
+    i = PATH_LEN(this)
+    WHILE PATH_LEN(this) > 0 DO
+		  DELETE_NODE(this,i,status)
+      CHK_STAT(status)
+      i = i - 1
+	  ENDWHILE
+  END clear_
+
+-- public
+
+ROUTINE new
+  BEGIN
+    index = 1
+    --clear members
+    clear_
+    --uninitailize
+    nde = set_null
+  END new
+
+ROUTINE delete
+  BEGIN
+    index = 0
+    --clear members
+    clear_
+    --uninitailize
+    nde = set_null
+  END delete
+
+ROUTINE next
+  BEGIN
+    IF (index + 1) > PATH_LEN(this) THEN
+      IF index = PATH_LEN(this) THEN
+        nde = this[index]
+        index = index + 1
+        RETURN(nde)
+      ELSE
+        RETURN(set_null)
+      ENDIF
+    ENDIF
+
+    nde = this[index]
+    index = index + 1
+    RETURN(nde)
+  END next
+
+ROUTINE prev
+  BEGIN
+    IF (index - 1) < 1 THEN
+      IF index = 1 THEN
+        nde = this[index]
+        index = index - 1
+        RETURN(nde)
+      ELSE
+        RETURN(set_null)
+      ENDIF
+    ENDIF
+
+    nde = this[index]
+    index = index - 1
+    RETURN(nde)
+  END prev
+
+ROUTINE push
+  VAR
+    status : INTEGER
+  BEGIN
+    --add to
+    APPEND_NODE(this, status)
+    CHK_STAT(status)
+    this[PATH_LEN(this)] = n
+  END push
+
+ROUTINE pop
+  VAR
+    status : INTEGER
+  BEGIN
+    IF (index < 1) THEN
+      nde = set_null
+      RETURN(nde)
+    ENDIF
+
+    nde = this[PATH_LEN(this)]
+    --add to
+    DELETE_NODE(this, PATH_LEN(this), status)
+    CHK_STAT(status)
+
+    RETURN(nde)
+  END pop
+
+ROUTINE insert
+  VAR
+    status : INTEGER
+  BEGIN
+    --add to
+    INSERT_NODE(this, index_, status)
+    CHK_STAT(status)
+    this[index_] = n
+  END insert
+
+ROUTINE take
+  VAR
+    status : INTEGER
+  BEGIN
+    IF (index + i) > PATH_LEN(this) THEN
+      karelError(PATH_INDEX_OUT_OF_RANGE,'take is out of range on iterator.', ER_ABORT)
+    ENDIF
+
+    COPY_PATH(this, index, (index+i), out_pth, status)
+    CHK_STAT(status)
+  END take
+
+ROUTINE skip
+  BEGIN
+    IF (index + i) > PATH_LEN(this) THEN
+      karelError(PATH_INDEX_OUT_OF_RANGE,'skip is out of range on iterator.', ER_ABORT)
+    ENDIF
+
+    index = index + i
+    nde = this[index]
+    RETURN(nde)
+  END skip
+
+ROUTINE set_index
+  BEGIN
+    IF (i = 0) THEN
+      karelError(PATH_INDEX_OUT_OF_RANGE,'paths start at index 1', ER_ABORT)
+    ENDIF
+    IF (i > PATH_LEN(this)) THEN
+      karelError(PATH_INDEX_OUT_OF_RANGE,'index outside of range', ER_ABORT)
+    ENDIF
+    --handle reverse
+    IF (i < 0) THEN
+      i = PATH_LEN(this) + (i+1)
+      IF i < 1 THEN
+        karelError(PATH_INDEX_OUT_OF_RANGE,'reverse index out of range. Using first index.', ER_WARN)
+        i = 1
+      ENDIF
+    ENDIF
+
+    index = i
+
+    nde = this[index]
+  END set_index
+
+ROUTINE get_index
+  BEGIN
+    IF (i = 0) THEN
+      karelError(PATH_INDEX_OUT_OF_RANGE,'paths start at index 1', ER_ABORT)
+    ENDIF
+    IF (i > PATH_LEN(this)) THEN
+      karelError(PATH_INDEX_OUT_OF_RANGE,'index outside of range', ER_ABORT)
+    ENDIF
+    --handle reverse
+    IF (i < 0) THEN
+      i = PATH_LEN(this) + (i+1)
+      IF i < 1 THEN
+        karelError(PATH_INDEX_OUT_OF_RANGE,'reverse index out of range. Using first index.', ER_WARN)
+        i = 1
+      ENDIF
+    ENDIF
+    RETURN(this[i])
+  END get_index
+
+ROUTINE get
+  BEGIN
+    RETURN(nde)
+  END get
+
+ROUTINE is_empty
+  BEGIN
+    RETURN(PATH_LEN(this) = 0)
+  END is_empty
+
+ROUTINE len
+  BEGIN
+    RETURN(PATH_LEN(this))
+  END len
+
+BEGIN
+END class_name

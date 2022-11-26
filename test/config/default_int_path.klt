@@ -1,0 +1,116 @@
+%define ITR_PATH_CONFIG default_int_path.klt
+
+%define ITR_TYPE t_INTEGER
+%define ITR_UNWRAP_TYPE INTEGER
+
+
+%mode push
+%mode string QQQ "`" "`" "\\"
+
+%define define_itr_private_headers `
+`
+
+%define define_itr_headers(parent) `
+declare_member(parent,is_null,parent,isnll)
+ROUTINE is_null : BOOLEAN FROM parent
+declare_member(parent,wrap,parent,wrap)
+ROUTINE wrap(int : ITR_UNWRAP_TYPE) FROM parent
+declare_member(parent,unwrap,parent,unwrp)
+ROUTINE unwrap : ITR_UNWRAP_TYPE FROM parent
+declare_member(parent,unwrap_pop,parent,uwpop)
+ROUTINE unwrap_pop : ITR_UNWRAP_TYPE FROM parent
+declare_member(parent,unwrap_next,parent,uwnxt)
+ROUTINE unwrap_next : ITR_UNWRAP_TYPE FROM parent
+declare_member(parent,unwrap_from,parent,unwfm)
+ROUTINE unwrap_from(n : ITR_TYPE) : ITR_UNWRAP_TYPE FROM parent
+`
+
+%mode pop
+
+%mode push
+%mode string QQQ "`" "`" "\\"
+%define define_null_type(parent) `
+ROUTINE set_null : ITR_TYPE
+  VAR
+    uninitnde :  ITR_TYPE
+  BEGIN
+    nde = uninitnde
+    RETURN(uninitnde)
+  END set_null
+`
+
+%define define_is_null(parent) `
+ROUTINE is_null -- : BOOLEAN
+  BEGIN
+    RETURN(UNINIT(nde.v))
+  END is_null
+
+ROUTINE is_null_(n : ITR_TYPE) : BOOLEAN
+  BEGIN
+    RETURN(UNINIT(n.v))
+  END is_null_
+`
+
+%define define_wrap(parent) `
+ROUTINE wrap
+  VAR
+    n : ITR_TYPE
+  BEGIN
+    n.v = int
+    push(n)
+  END wrap
+`
+
+%define define_unwrap_pop(parent) `
+ROUTINE unwrap_pop
+  VAR
+    n : ITR_TYPE
+  BEGIN
+    n = pop
+
+    IF is_null_(n) THEN
+      RETURN(n.v)
+    ENDIF
+    
+    RETURN(n.v)
+  END unwrap_pop
+`
+
+%define define_unwrap_next(parent) `
+ROUTINE unwrap_next
+  VAR
+    n : ITR_TYPE
+  BEGIN
+    n = next
+
+    IF is_null_(n) THEN
+      RETURN(n.v)
+    ENDIF
+    
+    RETURN(n.v)
+  END unwrap_next
+`
+
+%define define_unwrap_from(parent) `
+ROUTINE unwrap_from
+  BEGIN
+    RETURN(n.v)
+  END unwrap_from
+`
+
+%define define_unwrap(parent) `
+ROUTINE unwrap
+  VAR
+    n : ITR_TYPE
+  BEGIN
+    n = get
+
+    IF is_null_(n) THEN
+      RETURN(n.v)
+    ENDIF
+    
+    RETURN(n.v)
+  END unwrap
+`
+
+%mode pop

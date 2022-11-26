@@ -1,0 +1,47 @@
+--header
+%include header_guard.m
+--oop
+%include namespace.m
+
+--start header file
+header_if -- ifndef class
+header_def -- define class
+
+--set template headers
+define_itr_headers(class_name)
+
+declare_member(class_name,new,class_name,new)
+ROUTINE new FROM class_name
+declare_member(class_name,delete,class_name,del)
+ROUTINE delete FROM class_name
+
+declare_member(class_name,next,class_name,next)
+ROUTINE next : ITR_TYPE FROM class_name
+declare_member(class_name,prev,class_name,prev)
+ROUTINE prev : ITR_TYPE FROM class_name
+declare_member(class_name,push,class_name,push)
+ROUTINE push(n : ITR_TYPE) FROM class_name
+declare_member(class_name,pop,class_name,pop)
+ROUTINE pop : ITR_TYPE FROM class_name
+declare_member(class_name,insert,class_name,insrt)
+ROUTINE insert(index_ : INTEGER; n : ITR_TYPE) FROM class_name
+declare_member(class_name,take,class_name,take)
+ROUTINE take(i : INTEGER; out_pth : PATH nodedata = ITR_TYPE) FROM class_name
+declare_member(class_name,skip,class_name,skip)
+ROUTINE skip(i : INTEGER) : ITR_TYPE FROM class_name
+declare_member(class_name,set_index,class_name,stidx)
+ROUTINE set_index(i : INTEGER) FROM class_name
+declare_member(class_name,get_index,class_name,gtidx)
+ROUTINE get_index(i : INTEGER) : ITR_TYPE FROM class_name
+declare_member(class_name,get,class_name,get)
+ROUTINE get : ITR_TYPE FROM class_name
+
+declare_member(class_name,is_empty,class_name,ismpt)
+ROUTINE is_empty : BOOLEAN FROM class_name
+-- > [!NOTE] `is_null` is defined in configuration file
+
+declare_member(class_name,len,class_name,len)
+ROUTINE len : INTEGER FROM class_name
+
+
+%endif --end header
