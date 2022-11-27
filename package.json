@@ -6,7 +6,7 @@
   "license" : "MIT",
   "author" : "kobbled",
   "includes" : [
-    "lib"
+    "lib/path",
   ],
   "tests-includes" :[
     "test/config"
