@@ -79,14 +79,8 @@ ROUTINE delete
 
 ROUTINE next
   BEGIN
-    IF (index + 1) > PATH_LEN(this) THEN
-      IF index = PATH_LEN(this) THEN
-        nde = this[index]
-        index = index + 1
-        RETURN(nde)
-      ELSE
-        RETURN(set_null)
-      ENDIF
+    IF index > PATH_LEN(this) THEN
+      RETURN(set_null)
     ENDIF
 
     nde = this[index]
@@ -96,14 +90,8 @@ ROUTINE next
 
 ROUTINE prev
   BEGIN
-    IF (index - 1) < 1 THEN
-      IF index = 1 THEN
-        nde = this[index]
-        index = index - 1
-        RETURN(nde)
-      ELSE
-        RETURN(set_null)
-      ENDIF
+    IF (index) < 1 THEN
+      RETURN(set_null)
     ENDIF
 
     nde = this[index]
@@ -119,13 +107,17 @@ ROUTINE push
     APPEND_NODE(this, status)
     CHK_STAT(status)
     this[PATH_LEN(this)] = n
+
+    IF PATH_LEN(this) = 1 THEN
+      nde = this[1]
+    ENDIF
   END push
 
 ROUTINE pop
   VAR
     status : INTEGER
   BEGIN
-    IF (index < 1) THEN
+    IF (PATH_LEN(this) = 0) THEN
       nde = set_null
       RETURN(nde)
     ENDIF
@@ -177,7 +169,7 @@ ROUTINE set_index
       karelError(PATH_INDEX_OUT_OF_RANGE,'paths start at index 1', ER_ABORT)
     ENDIF
     IF (i > PATH_LEN(this)) THEN
-      karelError(PATH_INDEX_OUT_OF_RANGE,'index outside of range', ER_ABORT)
+      karelError(PATH_INDEX_OUT_OF_RANGE,'set index outside of range', ER_ABORT)
     ENDIF
     --handle reverse
     IF (i < 0) THEN
@@ -199,7 +191,7 @@ ROUTINE get_index
       karelError(PATH_INDEX_OUT_OF_RANGE,'paths start at index 1', ER_ABORT)
     ENDIF
     IF (i > PATH_LEN(this)) THEN
-      karelError(PATH_INDEX_OUT_OF_RANGE,'index outside of range', ER_ABORT)
+      karelError(PATH_INDEX_OUT_OF_RANGE,'get index outside of range', ER_ABORT)
     ENDIF
     --handle reverse
     IF (i < 0) THEN
