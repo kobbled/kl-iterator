@@ -1,4 +1,4 @@
-PROGRAM test_itr
+PROGRAM test_itr_pth
 %NOLOCKGROUP
 
 %include systemlib.types.klt
@@ -62,13 +62,11 @@ ROUTINE t_iter_next : BOOLEAN
     tstiti__push(except[5])
 
     i = 1
-    REPEAT
+    WHILE NOT tstiti__is_null DO
       nde = tstiti__next
-      IF NOT tstiti__is_null THEN
-        actual[i] = nde
-        i = i + 1
-      ENDIF
-    UNTIL(tstiti__is_null)
+      actual[i] = nde
+      i = i + 1
+    ENDWHILE
 
     RETURN(kunit_eq_int(5, tstiti__unwrap_from(actual[1])) AND kunit_eq_int(10, tstiti__unwrap_from(actual[2])) AND &
            kunit_eq_int(23, tstiti__unwrap_from(actual[3])) AND kunit_eq_int(1, tstiti__unwrap_from(actual[4])) AND &
@@ -96,13 +94,11 @@ ROUTINE t_iter_prev : BOOLEAN
     tstiti__set_index(-1)
 
     i = 1
-    REPEAT
+    WHILE NOT tstiti__is_null DO
       nde = tstiti__prev
-      IF NOT tstiti__is_null THEN
-        actual[i] = nde
-        i = i + 1
-      ENDIF
-    UNTIL(tstiti__is_null)
+      actual[i] = nde
+      i = i + 1
+    ENDWHILE
 
     RETURN(kunit_eq_int(100, tstiti__unwrap_from(actual[1])) AND kunit_eq_int(1, tstiti__unwrap_from(actual[2])) AND &
            kunit_eq_int(23, tstiti__unwrap_from(actual[3])) AND kunit_eq_int(10, tstiti__unwrap_from(actual[4])) AND &
@@ -164,13 +160,11 @@ ROUTINE t_it_path : BOOLEAN
     tstiph__wrap(except[5])
 
     i = 1
-    REPEAT
+    WHILE NOT tstiph__is_null DO
       nde = tstiph__unwrap_next
-      IF NOT tstiph__is_null THEN
-        actual[i] = nde
-        i = i + 1
-      ENDIF
-    UNTIL(tstiph__is_null)
+      actual[i] = nde
+      i = i + 1
+    ENDWHILE
     
     RETURN(kunit_eq_arp(except, actual))
   END t_it_path
@@ -188,4 +182,4 @@ BEGIN
   -- tstiph__delete
 
   kunit_done
-END test_itr
+END test_itr_pth

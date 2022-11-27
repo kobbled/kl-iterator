@@ -42,6 +42,10 @@ ROUTINE set_null : ITR_TYPE
 %define define_is_null(parent) `
 ROUTINE is_null -- : BOOLEAN
   BEGIN
+    IF (index > PATH_LEN(this)) OR (index < 1) THEN
+      nde = set_null
+    ENDIF
+
     RETURN(UNINIT(nde.v))
   END is_null
 

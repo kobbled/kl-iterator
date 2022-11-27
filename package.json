@@ -9,10 +9,10 @@
     "lib/path",
   ],
   "tests-includes" :[
-    "test/config"
+    "test/config/path",
   ],
   "tests" : [
-    "test/test_itr.kl"
+    "test/test_itr_pth.kl"
   ],
   "depends" : [
     "ktransw-macros",
