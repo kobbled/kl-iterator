@@ -1,0 +1,49 @@
+%define ITR_ARRAY_CONFIG default_int_array.klt
+
+%define ITR_TYPE INTEGER
+%define ARRAY_SIZE 10
+%define ARRAY_UNINIT_VAL MIN_INTEGER
+
+%mode push
+%mode string QQQ "`" "`" "\\"
+
+%define define_itr_private_headers(parent) `
+declare_member(parent,set_null_array,parent,stnla)
+ROUTINE set_null_array(i : INTEGER) FROM parent
+declare_member(parent,set_null_nde,parent,stnln)
+ROUTINE set_null_nde FROM parent
+`
+
+%define define_itr_headers(parent) `
+declare_member(parent,is_null,parent,isnll)
+ROUTINE is_null : BOOLEAN FROM parent
+`
+
+%mode pop
+
+%mode push
+%mode string QQQ "`" "`" "\\"
+%define define_null_type(parent) `
+ROUTINE set_null_nde
+  BEGIN
+    SET_UNINIT_I('parent', 'nde')
+  END set_null_nde
+
+ROUTINE set_null_array
+  BEGIN
+    SET_UNINIT_I('parent', 'this[' + i_to_s(i) + ']')
+  END set_null_array
+`
+
+%define define_is_null(parent) `
+ROUTINE is_null -- : BOOLEAN
+  BEGIN
+    IF (index > length) OR (index < 1) THEN
+      set_null_nde
+    ENDIF
+
+    RETURN(UNINIT(nde))
+  END is_null
+`
+
+%mode pop

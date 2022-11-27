@@ -7,16 +7,19 @@
   "author" : "kobbled",
   "includes" : [
     "lib/path",
+    "lib/array"
   ],
   "tests-includes" :[
     "test/config/path",
+    "test/config/array"
   ],
   "tests" : [
-    "test/test_itr_pth.kl"
+    "test/test_itr_arr.kl"
   ],
   "depends" : [
     "ktransw-macros",
     "errors",
+    "Strings",
     "systemlib"
   ],
   "tests-depends" : [

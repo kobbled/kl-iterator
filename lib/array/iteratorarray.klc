@@ -1,0 +1,213 @@
+PROGRAM class_name
+%NOBUSYLAMP
+%COMMENT = 'iterator class'
+%NOLOCKGROUP
+%NOPAUSE = COMMAND + TPENABLE + ERROR
+
+%defeval BASE_CLASSNAME class_name
+
+%include systemvars.klt
+%include systemlib.macros.klt
+--include atomic types
+%include systemlib.types.klt
+
+%include errors.klt
+
+%defeval class_name BASE_CLASSNAME
+
+VAR
+  this : ARRAY[ARRAY_SIZE] OF ITR_TYPE
+  nde :  ITR_TYPE
+  index : INTEGER
+  length : INTEGER
+
+--includes
+%include errors.klh
+%include strings.klh
+
+%defeval class_name BASE_CLASSNAME
+
+-- iterator class members
+%include iteratorarray.klh
+define_itr_private_headers(class_name)
+
+-- **** DEFINED TEMPLATES
+  -- private template members
+define_null_type(class_name)
+  -- public template members
+define_is_null(class_name)
+
+--private
+
+ROUTINE clear_
+  BEGIN
+    WHILE length > 0 DO
+		  set_null_array(length)
+      length = length - 1
+	  ENDWHILE
+  END clear_
+
+-- public
+
+ROUTINE new
+  BEGIN
+    index = 1
+    IF UNINIT(length) THEN length = 0 ; ENDIF
+    clear_
+    --uninitailize
+    set_null_nde
+  END new
+
+ROUTINE delete
+  BEGIN
+    index = 0
+    --clear members
+    clear_
+    --uninitailize
+    set_null_nde
+  END delete
+
+ROUTINE next
+  BEGIN
+    IF (index > length) THEN
+      set_null_nde
+      RETURN(nde)
+    ENDIF
+
+    nde = this[index]
+    index = index + 1
+    RETURN(nde)
+  END next
+
+ROUTINE prev
+  BEGIN
+    IF (index < 1) THEN
+      set_null_nde
+      RETURN(nde)
+    ENDIF
+
+    nde = this[index]
+    index = index - 1
+    RETURN(nde)
+  END prev
+
+ROUTINE push
+  BEGIN
+    IF (length + 1) > ARRAY_LEN(this) THEN
+      karelError(INVALID_INDEX,'Array size is too small. Increase size.', ER_ABORT)
+    ENDIF
+
+    length = length + 1
+    --add to
+    this[length] = n
+    
+    IF length = 1 THEN
+      nde = this[1]
+    ENDIF
+  END push
+
+ROUTINE pop
+  VAR
+    status : INTEGER
+  BEGIN
+    IF (length = 0) THEN
+      set_null_nde
+      RETURN(nde)
+    ENDIF
+
+    nde = this[length]
+    --add to
+    set_null_array(length)
+    length = length - 1
+
+    RETURN(nde)
+  END pop
+
+ROUTINE insert
+  VAR
+    i : INTEGER
+    prev_node, next_node : ITR_TYPE
+  BEGIN
+    IF index_ > ARRAY_LEN(this) THEN
+      karelError(INVALID_INDEX,'Cannot insert, array size must be increased.', ER_ABORT)
+    ENDIF
+    IF index_ > length THEN
+      karelError(INVALID_INDEX,'Cannot insert at ' + i_to_s(index_) + ', array length is shorter.', ER_ABORT)
+    ENDIF
+    IF (length + 1) > ARRAY_LEN(this) THEN
+      karelError(INVALID_INDEX,'Array size is too small. Increase size.', ER_ABORT)
+    ENDIF
+
+    --add to
+    prev_node = this[index_]
+    this[index_] = n
+
+    FOR i = (index_ + 1) TO (length) DO
+      next_node = this[i]
+      this[i] = prev_node
+      prev_node = next_node
+    ENDFOR
+
+    this[length+1] = prev_node
+    length = length + 1
+  END insert
+
+ROUTINE set_index
+  BEGIN
+    IF (i = 0) THEN
+      karelError(INVALID_INDEX,'array start at index 1', ER_ABORT)
+    ENDIF
+    IF (i > length) THEN
+      karelError(INVALID_INDEX,'set index outside of array length', ER_ABORT)
+    ENDIF
+    --handle reverse
+    IF (i < 0) THEN
+      i = length + (i+1)
+      IF i < 1 THEN
+        karelError(INVALID_INDEX,'reverse index out of range. Setting first index.', ER_WARN)
+        i = 1
+      ENDIF
+    ENDIF
+
+    index = i
+
+    nde = this[index]
+  END set_index
+
+ROUTINE get_index
+  BEGIN
+    IF (i = 0) THEN
+      karelError(INVALID_INDEX,'array start at index 1', ER_ABORT)
+    ENDIF
+    IF (i > length) THEN
+      karelError(INVALID_INDEX,'get index outside of range', ER_ABORT)
+    ENDIF
+    --handle reverse
+    IF (i < 0) THEN
+      i = length + (i+1)
+      IF i < 1 THEN
+        karelError(PATH_INDEX_OUT_OF_RANGE,'reverse index out of range. Using first index.', ER_WARN)
+        i = 1
+      ENDIF
+    ENDIF
+
+    RETURN(this[i])
+  END get_index
+
+ROUTINE get
+  BEGIN
+    RETURN(nde)
+  END get
+
+ROUTINE is_empty
+  BEGIN
+    RETURN(length <= 0)
+  END is_empty
+
+ROUTINE len
+  BEGIN
+    RETURN(length)
+  END len
+
+BEGIN
+END class_name
