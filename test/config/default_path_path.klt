@@ -8,7 +8,6 @@
 %mode string QQQ "`" "`" "\\"
 
 %define define_itr_private_headers `
-%from kunit.klh %import kunit_eq_pos
 `
 
 %define define_itr_headers(parent) `
