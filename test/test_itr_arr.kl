@@ -40,7 +40,6 @@ ROUTINE t_iter_next : BOOLEAN
   VAR
     except : ARRAY[5] OF INTEGER
     actual : ARRAY[5] OF INTEGER
-    nde : INTEGER
     i : INTEGER
   BEGIN
     except[1] = 5; except[2] = 10; except[3] = 23; except[4] = 1; except[5] = 100
@@ -55,8 +54,7 @@ ROUTINE t_iter_next : BOOLEAN
 
     i = 1
     WHILE NOT tstiai__is_null DO
-      nde = tstiai__next
-      actual[i] = nde
+      actual[i] = tstiai__next
       i = i + 1
     ENDWHILE
 
@@ -69,7 +67,6 @@ ROUTINE t_iter_prev : BOOLEAN
   VAR
     except : ARRAY[5] OF INTEGER
     actual : ARRAY[5] OF INTEGER
-    nde : INTEGER
     i : INTEGER
   BEGIN
     except[1] = 5; except[2] = 10; except[3] = 23; except[4] = 1; except[5] = 100
@@ -87,8 +84,7 @@ ROUTINE t_iter_prev : BOOLEAN
 
     i = 1
     WHILE NOT tstiai__is_null DO
-      nde = tstiai__prev
-      actual[i] = nde
+      actual[i] = tstiai__prev
       i = i + 1
     ENDWHILE
 
@@ -129,12 +125,43 @@ ROUTINE t_get_set : BOOLEAN
            kunit_eq_int(10, actual[5]) )
   END t_get_set
 
+ROUTINE t_insert : BOOLEAN
+  VAR
+    except : ARRAY[5] OF INTEGER
+    actual : ARRAY[6] OF INTEGER
+    i : INTEGER
+  BEGIN
+    except[1] = 5; except[2] = 10; except[3] = 23; except[4] = 1; except[5] = 100
+
+    tstiai__new
+    --build
+    tstiai__push(except[1])
+    tstiai__push(except[2])
+    tstiai__push(except[3])
+    tstiai__push(except[4])
+    tstiai__push(except[5])
+
+    --set to end
+    tstiai__insert(3, 638)
+
+    i = 1
+    WHILE NOT tstiai__is_null DO
+      actual[i] = tstiai__next
+      i = i + 1
+    ENDWHILE
+
+    RETURN(kunit_eq_int(5, actual[1]) AND kunit_eq_int(10, actual[2]) AND &
+           kunit_eq_int(638, actual[3]) AND kunit_eq_int(23, actual[4]) AND & 
+           kunit_eq_int(1, actual[5]) AND kunit_eq_int(100, actual[6]) )
+  END t_insert
+
 
 BEGIN
   kunit_test('test pop', t_iter_pop)
   kunit_test('test next', t_iter_next)
   kunit_test('test prev', t_iter_prev)
   kunit_test('test get & set', t_get_set)
+  kunit_test('test insert', t_insert)
 
   --clean up
   tstiai__delete

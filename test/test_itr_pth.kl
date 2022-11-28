@@ -48,7 +48,6 @@ ROUTINE t_iter_next : BOOLEAN
   VAR
     except : ARRAY[5] OF t_INTEGER
     actual : ARRAY[5] OF t_INTEGER
-    nde : t_INTEGER
     i : INTEGER
   BEGIN
     except[1].v = 5; except[2].v = 10; except[3].v = 23; except[4].v = 1; except[5].v = 100
@@ -63,8 +62,7 @@ ROUTINE t_iter_next : BOOLEAN
 
     i = 1
     WHILE NOT tstiti__is_null DO
-      nde = tstiti__next
-      actual[i] = nde
+      actual[i] = tstiti__next
       i = i + 1
     ENDWHILE
 
@@ -77,7 +75,6 @@ ROUTINE t_iter_prev : BOOLEAN
   VAR
     except : ARRAY[5] OF t_INTEGER
     actual : ARRAY[5] OF t_INTEGER
-    nde : t_INTEGER
     i : INTEGER
   BEGIN
     except[1].v = 5; except[2].v = 10; except[3].v = 23; except[4].v = 1; except[5].v = 100
@@ -95,8 +92,7 @@ ROUTINE t_iter_prev : BOOLEAN
 
     i = 1
     WHILE NOT tstiti__is_null DO
-      nde = tstiti__prev
-      actual[i] = nde
+      actual[i] = tstiti__prev
       i = i + 1
     ENDWHILE
 
@@ -142,7 +138,6 @@ ROUTINE t_it_path : BOOLEAN
   VAR
     except : ARRAY[5] OF XYZWPR
     actual : ARRAY[5] OF XYZWPR
-    nde : XYZWPR
     i : INTEGER
   BEGIN
     except[1] = POS(0,80,0,0,0,0,(ZEROPOS(1).Config_data))
@@ -161,8 +156,7 @@ ROUTINE t_it_path : BOOLEAN
 
     i = 1
     WHILE NOT tstiph__is_null DO
-      nde = tstiph__unwrap_next
-      actual[i] = nde
+      actual[i] = tstiph__unwrap_next
       i = i + 1
     ENDWHILE
     
