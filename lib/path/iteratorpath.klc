@@ -6,6 +6,16 @@ PROGRAM class_name
 
 %defeval BASE_CLASSNAME class_name
 
+%ifdef ITER_STRUCT
+--define custom struct if supplied
+ITER_STRUCT(class_name)
+%endif
+
+%ifdef ITER_STRUCT_IMPORT
+--import custom struct if specified
+%include ITER_STRUCT_IMPORT
+%endif
+
 %include systemvars.klt
 %include systemlib.macros.klt
 --include atomic types
