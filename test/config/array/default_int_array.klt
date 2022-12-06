@@ -2,10 +2,14 @@
 
 %define ITR_TYPE INTEGER
 %define ARRAY_SIZE 10
-%define ARRAY_UNINIT_VAL MIN_INTEGER
 
 %mode push
 %mode string QQQ "`" "`" "\\"
+
+%define ENABLE_REGMAPPING
+%define REGMAPPGET `
+registerstp__get_karel_int('classname', 'int_', 2)
+`
 
 %define define_itr_private_headers(parent) `
 declare_member(parent,set_null_array,parent,stnla)
@@ -44,6 +48,42 @@ ROUTINE is_null -- : BOOLEAN
 
     RETURN(UNINIT(nde))
   END is_null
+`
+
+--define tp interface with iterator
+%define ITER_TP_VARS `
+  func_ : INTEGER
+  int_ : ITR_TYPE
+`
+
+%define ITER_TP_INTERFACE `
+  --tpe class function
+  func_ = tpe__get_int_arg(1)
+
+  SELECT func_ OF
+    CASE(ITER_RESET):
+      new
+    CASE(ITER_PUSH):
+      push(tpe__get_int_arg(2))
+    CASE(ITER_POP):
+      int_ = pop
+      REGMAPPGET
+    CASE(ITER_INSERT):
+      insert(tpe__get_int_arg(3), tpe__get_int_arg(2))
+    CASE(ITER_GET):
+      set_index(tpe__get_int_arg(2))
+      int_ = get
+      REGMAPPGET
+    CASE(ITER_NEXT):
+      int_ = next
+      REGMAPPGET
+    CASE(ITER_PREV):
+      int_ = prev
+      REGMAPPGET
+    CASE(ITER_NULL):
+      registers__set_boolean(tpe__get_int_arg(2), is_null)
+    ELSE:
+  ENDSELECT
 `
 
 %mode pop

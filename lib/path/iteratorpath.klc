@@ -13,7 +13,10 @@ ITER_STRUCT(class_name)
 
 %ifdef ITER_STRUCT_IMPORT
 --import custom struct if specified
-%include ITER_STRUCT_IMPORT
+%mode push
+%mode quote "$"
+%eval $%include ITER_STRUCT_IMPORT$
+%mode pop
 %endif
 
 %include systemvars.klt
@@ -23,15 +26,43 @@ ITER_STRUCT(class_name)
 
 %include errors.klt
 
+%ifdef ENABLE_REGMAPPING
+--regmap getters/setters
+%include regmap.klt
+%endif
+
 %defeval class_name BASE_CLASSNAME
+
+CONST
+  --tp functions
+  ITER_RESET  = 1
+  ITER_PUSH   = 2
+  ITER_POP    = 3
+  ITER_INSERT = 4
+  ITER_GET    = 5
+  ITER_NEXT   = 6
+  ITER_PREV   = 7
+  ITER_NULL   = 8
 
 VAR
   this : PATH nodedata = ITR_TYPE
   nde :  ITR_TYPE
   index : INTEGER
+  --tp variables
+  ITER_TP_VARS
+
 
 --includes
 %include errors.klh
+
+%ifdef ENABLE_REGMAPPING
+--imports for tp interfacing
+%from registers.klh %import get_int, get_real, get_string, get_io, get_type_enum, set_boolean
+%include registerstp.klh
+%endif
+
+%from pose.klh %import get_posreg_joint, get_posreg_xyz
+%from tpe.klh %import get_int_arg, get_real_arg, get_string_arg, get_boolean_arg
 
 --include template specific imports
 define_itr_private_headers
@@ -46,11 +77,28 @@ define_itr_private_headers
 define_null_type(class_name)
   -- public template members
 define_is_null(class_name)
+
+%ifdef define_unwrap_pop
 define_unwrap_pop(class_name)
+%endif
+%ifdef define_unwrap_next
 define_unwrap_next(class_name)
+%endif
+%ifdef define_unwrap_prev
+define_unwrap_prev(class_name)
+%endif
+%ifdef define_unwrap_from
 define_unwrap_from(class_name)
+%endif
+%ifdef define_unwrap
 define_unwrap(class_name)
+%endif
+%ifdef define_wrap
 define_wrap(class_name)
+%endif
+%ifdef define_wrap_insert
+define_wrap_insert(parent)
+%endif
 
 --private
 
@@ -230,4 +278,5 @@ ROUTINE len
   END len
 
 BEGIN
+  ITER_TP_INTERFACE
 END class_name

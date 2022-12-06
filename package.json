@@ -20,7 +20,10 @@
     "ktransw-macros",
     "errors",
     "Strings",
-    "systemlib"
+    "systemlib",
+    "registers",
+    "pose",
+    "TPElib"
   ],
   "tests-depends" : [
     "KUnit",

@@ -7,6 +7,11 @@
 %mode push
 %mode string QQQ "`" "`" "\\"
 
+%define ENABLE_REGMAPPING
+%define REGMAPPGET `
+registerstp__get_karel_int('classname', 'int_', 2)
+`
+
 %define define_itr_private_headers `
 `
 
@@ -15,12 +20,16 @@ declare_member(parent,is_null,parent,isnll)
 ROUTINE is_null : BOOLEAN FROM parent
 declare_member(parent,wrap,parent,wrap)
 ROUTINE wrap(int : ITR_UNWRAP_TYPE) FROM parent
+declare_member(parent,wrap_insert,parent,wrpin)
+ROUTINE wrap_insert(index_ : INTEGER; int : ITR_UNWRAP_TYPE) FROM parent
 declare_member(parent,unwrap,parent,unwrp)
 ROUTINE unwrap : ITR_UNWRAP_TYPE FROM parent
 declare_member(parent,unwrap_pop,parent,uwpop)
 ROUTINE unwrap_pop : ITR_UNWRAP_TYPE FROM parent
 declare_member(parent,unwrap_next,parent,uwnxt)
 ROUTINE unwrap_next : ITR_UNWRAP_TYPE FROM parent
+declare_member(parent,unwrap_prev,parent,uwprv)
+ROUTINE unwrap_prev : ITR_UNWRAP_TYPE FROM parent
 declare_member(parent,unwrap_from,parent,unwfm)
 ROUTINE unwrap_from(n : ITR_TYPE) : ITR_UNWRAP_TYPE FROM parent
 `
@@ -65,6 +74,16 @@ ROUTINE wrap
   END wrap
 `
 
+%define define_wrap_insert(parent) `
+ROUTINE wrap_insert
+  VAR
+    n : ITR_TYPE
+  BEGIN
+    n.v = int
+    insert(index_, n)
+  END wrap_insert
+`
+
 %define define_unwrap_pop(parent) `
 ROUTINE unwrap_pop
   VAR
@@ -95,6 +114,21 @@ ROUTINE unwrap_next
   END unwrap_next
 `
 
+%define define_unwrap_prev(parent) `
+ROUTINE unwrap_prev
+  VAR
+    n : ITR_TYPE
+  BEGIN
+    n = prev
+
+    IF is_null_(n) THEN
+      RETURN(n.v)
+    ENDIF
+    
+    RETURN(n.v)
+  END unwrap_prev
+`
+
 %define define_unwrap_from(parent) `
 ROUTINE unwrap_from
   BEGIN
@@ -115,6 +149,42 @@ ROUTINE unwrap
     
     RETURN(n.v)
   END unwrap
+`
+
+--define tp interface with iterator
+%define ITER_TP_VARS `
+  func_ : INTEGER
+  int_ : ITR_UNWRAP_TYPE
+`
+
+%define ITER_TP_INTERFACE `
+  --tpe class function
+  func_ = tpe__get_int_arg(1)
+
+  SELECT func_ OF
+    CASE(ITER_RESET):
+      new
+    CASE(ITER_PUSH):
+      wrap(tpe__get_int_arg(2))
+    CASE(ITER_POP):
+      int_ = unwrap_pop
+      REGMAPPGET
+    CASE(ITER_INSERT):
+      wrap_insert(tpe__get_int_arg(3), tpe__get_int_arg(2))
+    CASE(ITER_GET):
+      set_index(tpe__get_int_arg(2))
+      int_ = unwrap
+      REGMAPPGET
+    CASE(ITER_NEXT):
+      int_ = unwrap_next
+      REGMAPPGET
+    CASE(ITER_PREV):
+      int_ = unwrap_prev
+      REGMAPPGET
+    CASE(ITER_NULL):
+      registers__set_boolean(tpe__get_int_arg(2), is_null)
+    ELSE:
+  ENDSELECT
 `
 
 %mode pop
