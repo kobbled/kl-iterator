@@ -4,11 +4,17 @@ PROGRAM test_itr_arr
 %include systemlib.types.klt
 %include systemvars.klt
 
+--define custom struct
+%include default_custom_array.klt
+ITER_STRUCT(tstias)
+
 %include kunit.klh
-%from pose.klh %import set_config
+%from pose.klh %import set_config, get_posreg_xyz
+%from registers.klh %import get_int, get_real, get_string, get_io
 
 --tsp object
 %class tstiai('iteratorarray.klc','iteratorarray.klh','default_int_array.klt')
+%class tstias('iteratorarray.klc','iteratorarray.klh','default_custom_array.klt')
 
 ROUTINE t_iter_pop : BOOLEAN
   VAR
@@ -155,6 +161,36 @@ ROUTINE t_insert : BOOLEAN
            kunit_eq_int(1, actual[5]) AND kunit_eq_int(100, actual[6]) )
   END t_insert
 
+ROUTINE t_it_struct : BOOLEAN
+  VAR
+    i : INTEGER
+    actual : ARRAY[5] OF t_TSTCUSTOM
+    expected : ARRAY[5] OF t_TSTCUSTOM
+  BEGIN
+    tstias__new
+
+    --build
+    expected[1].str = 'hello'; expected[1].reg1 = 1; expected[1].reg2 = 3.14; expected[1].pose = POS(0,80,0,0,0,0,(ZEROPOS(1).Config_data))
+    tstias__push(expected[1])
+    expected[2].str = 'world'; expected[2].reg1 = 23; expected[2].reg2 = 6.28; expected[2].pose = POS(48,64,10,0,0,0,(ZEROPOS(1).Config_data))
+    tstias__push(expected[2])
+    expected[3].str = 'foo'; expected[3].reg1 = 70; expected[3].reg2 = 2.718; expected[3].pose = POS(77,21,20,0,0,0,(ZEROPOS(1).Config_data))
+    tstias__push(expected[3])
+    expected[4].str = 'bar'; expected[4].reg1 = 150; expected[4].reg2 = 0.707; expected[4].pose = POS(74,31,30,0,0,0,(ZEROPOS(1).Config_data))
+    tstias__push(expected[4])
+    expected[5].str = 'baz'; expected[5].reg1 = -1; expected[5].reg2 = 0.5; expected[5].pose = POS(39,-70,40,0,0,0,(ZEROPOS(1).Config_data))
+    tstias__push(expected[5])
+
+    i = 1
+    WHILE NOT tstias__is_null DO
+      actual[i] = tstias__next
+      i = i + 1
+    ENDWHILE
+    
+    RETURN(kunit_eq_str(expected[1].str, actual[1].str) AND kunit_eq_int(expected[2].reg1, actual[2].reg1) AND &
+           kunit_eq_r(expected[3].reg2, actual[3].reg2) AND kunit_eq_pos(expected[4].pose, actual[4].pose) )
+  END t_it_struct
+
 
 BEGIN
   kunit_test('test pop', t_iter_pop)
@@ -162,9 +198,11 @@ BEGIN
   kunit_test('test prev', t_iter_prev)
   kunit_test('test get & set', t_get_set)
   kunit_test('test insert', t_insert)
+  kunit_test('test array custom struct', t_it_struct)
 
   --clean up
   tstiai__delete
+  tstias__delete
 
   kunit_done
 END test_itr_arr

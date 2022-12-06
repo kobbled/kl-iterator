@@ -4,12 +4,18 @@ PROGRAM test_itr_pth
 %include systemlib.types.klt
 %include systemvars.klt
 
+--define custom struct
+%include default_custom_path.klt
+ITER_STRUCT(tstist)
+
 %include kunit.klh
-%from pose.klh %import set_config
+%from pose.klh %import set_config, get_posreg_xyz
+%from registers.klh %import get_int, get_real, get_string, get_io
 
 --tsp object
 %class tstiti('iteratorpath.klc','iteratorpath.klh','default_int_path.klt')
 %class tstiph('iteratorpath.klc','iteratorpath.klh','default_path_path.klt')
+%class tstist('iteratorpath.klc','iteratorpath.klh','default_custom_path.klt')
 
 ROUTINE t_is_empty : BOOLEAN
   BEGIN
@@ -163,6 +169,35 @@ ROUTINE t_it_path : BOOLEAN
     RETURN(kunit_eq_arp(except, actual))
   END t_it_path
 
+ROUTINE t_it_struct : BOOLEAN
+  VAR
+    i : INTEGER
+    actual : ARRAY[5] OF t_TSTCUSTOM
+  BEGIN
+    tstist__new
+
+    --build
+    tstist__wrap('hello', 1, 3.14, POS(0,80,0,0,0,0,(ZEROPOS(1).Config_data)))
+    tstist__wrap('world', 23, 6.28, POS(48,64,10,0,0,0,(ZEROPOS(1).Config_data)))
+    tstist__wrap('foo', 70, 2.718, POS(77,21,20,0,0,0,(ZEROPOS(1).Config_data)))
+    tstist__wrap('bar', 150, 0.707, POS(74,31,30,0,0,0,(ZEROPOS(1).Config_data)))
+    tstist__wrap('baz', -1, 0.5, POS(39,-70,40,0,0,0,(ZEROPOS(1).Config_data)))
+
+    i = 1
+    WHILE NOT tstist__is_null DO
+      tstist__unwrap_next
+      actual[i].str = registers__get_string(1)
+      actual[i].reg1 = registers__get_int(2)
+      actual[i].reg2 = registers__get_real(3)
+      actual[i].pose = pose__get_posreg_xyz(4, 1)
+
+      i = i + 1
+    ENDWHILE
+    
+    RETURN(kunit_eq_str('hello', actual[1].str) AND kunit_eq_int(23, actual[2].reg1) AND &
+           kunit_eq_r(2.718, actual[3].reg2) AND kunit_eq_pos(POS(74,31,30,0,0,0,(ZEROPOS(1).Config_data)), actual[4].pose) )
+  END t_it_struct
+
 BEGIN
   kunit_test('test is empty', t_is_empty)
   kunit_test('test pop', t_iter_pop)
@@ -170,10 +205,12 @@ BEGIN
   kunit_test('test prev', t_iter_prev)
   kunit_test('test get & set', t_get_set)
   kunit_test('test path iterator', t_it_path)
+  kunit_test('test path custom struct', t_it_struct)
 
   --clean up
-  -- tstiti__delete
-  -- tstiph__delete
+  tstiti__delete
+  tstiph__delete
+  tstist__delete
 
   kunit_done
 END test_itr_pth
