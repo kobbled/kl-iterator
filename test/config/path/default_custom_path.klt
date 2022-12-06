@@ -1,0 +1,236 @@
+%define ITR_PATH_CONFIG default_custom_path.klt
+
+--define ITER_STRUCT_IMPORT 
+
+%mode push
+%mode string QQQ "`" "`" "\\"
+%define ITER_STRUCT(parent) `TYPE
+t_TSTCUSTOM FROM parent = STRUCTURE
+    str : STRING[16]
+    reg1 : INTEGER
+    reg2 : REAL
+    pose : XYZWPR
+  ENDSTRUCTURE
+`
+%mode pop
+
+%define ITR_TYPE t_TSTCUSTOM
+%define ITR_UNWRAP_TYPE t_TSTCUSTOM
+
+-- register mapping
+-- ************
+  -- define to enable register mapping in class
+%define ENABLE_REGMAPPING
+
+%mode push
+%mode string QQQ "`" "`" "\\"
+%define REGMAPPGET `
+  map_select_getter('class_name', 'nde', 'SR', 1, 'str' , 'STRING')
+  map_select_getter('class_name', 'nde', 'R',  2, 'reg1', 'INTEGER')
+  map_select_getter('class_name', 'nde', 'R',  3, 'reg2', 'REAL')
+  map_select_getter('class_name', 'nde', 'PR', 4, 'pose', 'XYZWPR')
+`
+
+%define REGMAPPSET `
+  map_select_setter('class_name', 'nde', 'SR', 1, 'str' , 'STRING')
+  map_select_setter('class_name', 'nde', 'R',  2, 'reg1', 'INTEGER')
+  map_select_setter('class_name', 'nde', 'R',  3, 'reg2', 'REAL')
+  map_select_setter('class_name', 'nde', 'PR', 4, 'pose', 'XYZWPR')
+`
+%mode pop
+
+
+%mode push
+%mode string QQQ "`" "`" "\\"
+
+%define define_itr_private_headers `
+`
+
+%define define_itr_headers(parent) `
+declare_member(parent,is_null,parent,isnll)
+ROUTINE is_null : BOOLEAN FROM parent
+declare_member(parent,wrap,parent,wrap)
+ROUTINE wrap(str : STRING; reg1 : INTEGER; reg2 : REAL; pose : XYZWPR) FROM parent
+declare_member(parent,wrap_insert,parent,wrpin)
+ROUTINE wrap_insert(index_ : INTEGER; str : STRING; reg1 : INTEGER; reg2 : REAL; pose : XYZWPR) FROM parent
+declare_member(parent,unwrap,parent,unwrp)
+ROUTINE unwrap FROM parent
+declare_member(parent,unwrap_pop,parent,uwpop)
+ROUTINE unwrap_pop FROM parent
+declare_member(parent,unwrap_next,parent,uwnxt)
+ROUTINE unwrap_next FROM parent
+declare_member(parent,unwrap_prev,parent,uwprv)
+ROUTINE unwrap_prev FROM parent
+`
+
+%mode pop
+
+%mode push
+%mode string QQQ "`" "`" "\\"
+%define define_null_type(parent) `
+ROUTINE set_null : ITR_TYPE
+  VAR
+    uninitnde :  ITR_TYPE
+  BEGIN
+    nde = uninitnde
+    RETURN(uninitnde)
+  END set_null
+`
+
+%define define_is_null(parent) `
+ROUTINE is_null -- : BOOLEAN
+  BEGIN
+    IF (index > PATH_LEN(this)) OR (index < 1) THEN
+      nde = set_null
+    ENDIF
+    
+    RETURN(UNINIT(nde.str))
+  END is_null
+
+ROUTINE is_null_(n : ITR_TYPE) : BOOLEAN
+  BEGIN
+    RETURN(UNINIT(n.str))
+  END is_null_
+
+`
+
+%define define_wrap(parent) `
+ROUTINE wrap
+  VAR
+    n : ITR_TYPE
+  BEGIN
+    n.str = str
+    n.reg1 = reg1
+    n.reg2 = reg2
+    n.pose = pose
+
+    push(n)
+  END wrap
+`
+
+%define define_wrap_insert(parent) `
+ROUTINE wrap_insert
+  VAR
+    n : ITR_TYPE
+  BEGIN
+    n.str = str
+    n.reg1 = reg1
+    n.reg2 = reg2
+    n.pose = pose
+
+    insert(index_, n)
+  END wrap_insert
+`
+
+%define define_unwrap(parent) `
+ROUTINE unwrap
+  VAR
+    n : ITR_TYPE
+  BEGIN
+    n = get
+
+    IF is_null_(n) THEN
+      RETURN
+    ENDIF
+    
+    --set registers with nde struct from last pop
+    REGMAPPGET
+  END unwrap
+`
+
+%define define_unwrap_pop(parent) `
+ROUTINE unwrap_pop
+  VAR
+    n : ITR_TYPE
+  BEGIN
+    n = pop
+
+    IF is_null_(n) THEN
+      RETURN
+    ENDIF
+
+    --set registers with nde struct from last pop
+    REGMAPPGET
+  END unwrap_pop
+`
+
+%define define_unwrap_next(parent) `
+ROUTINE unwrap_next
+  VAR
+    n : ITR_TYPE
+  BEGIN
+    n = next
+    
+    IF is_null_(n) THEN
+      RETURN
+    ENDIF
+    
+    --set registers with nde struct from last pop
+    REGMAPPGET
+  END unwrap_next
+`
+
+%define define_unwrap_prev(parent) `
+ROUTINE unwrap_prev
+  VAR
+    n : ITR_TYPE
+  BEGIN
+    n = prev
+    
+    IF is_null_(n) THEN
+      RETURN
+    ENDIF
+    
+    --set registers with nde struct from last pop
+    REGMAPPGET
+  END unwrap_prev
+`
+
+%define define_unwrap_from(parent) `
+  --unwrap_from is not used in this instance
+`
+
+--define tp interface with iterator
+%define ITER_TP_VARS `
+  func_ : INTEGER
+  tp_nde : ITR_TYPE
+`
+
+%define ITER_TP_INTERFACE `
+  --tpe class function
+  func_ = tpe__get_int_arg(1)
+
+  SELECT func_ OF
+    CASE(ITER_RESET):
+      new
+    CASE(ITER_PUSH):
+      tp_nde.str = tpe__get_string_arg(2)
+      tp_nde.reg1 = tpe__get_int_arg(3)
+      tp_nde.reg2 = tpe__get_real_arg(4)
+      tp_nde.pose = pose__get_posreg_xyz(tpe__get_int_arg(5), 1)
+
+      wrap(tp_nde.str, tp_nde.reg1, tp_nde.reg2, tp_nde.pose)
+    CASE(ITER_POP):
+      unwrap_pop
+    CASE(ITER_INSERT): 
+      tp_nde.str = tpe__get_string_arg(2)
+      tp_nde.reg1 = tpe__get_int_arg(3)
+      tp_nde.reg2 = tpe__get_real_arg(4)
+      tp_nde.pose = pose__get_posreg_xyz(tpe__get_int_arg(5), 1)
+
+      wrap_insert(tpe__get_int_arg(6), tp_nde.str, tp_nde.reg1, tp_nde.reg2, tp_nde.pose)
+    CASE(ITER_GET):
+      set_index(tpe__get_int_arg(2))
+      unwrap
+    CASE(ITER_NEXT):
+      unwrap_next
+    CASE(ITER_PREV):
+      unwrap_prev
+    CASE(ITER_NULL):
+      registers__set_boolean(tpe__get_int_arg(2), is_null)
+    ELSE:
+  ENDSELECT
+`
+
+
+%mode pop

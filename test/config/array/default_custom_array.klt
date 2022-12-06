@@ -1,0 +1,125 @@
+%define ITR_ARRAY_CONFIG default_int_array.klt
+
+%mode push
+%mode string QQQ "`" "`" "\\"
+%define ITER_STRUCT(parent) `TYPE
+t_TSTCUSTOM FROM parent = STRUCTURE
+    str : STRING[16]
+    reg1 : INTEGER
+    reg2 : REAL
+    pose : XYZWPR
+  ENDSTRUCTURE
+`
+%mode pop
+
+%define ITR_TYPE t_TSTCUSTOM
+%define ARRAY_SIZE 10
+
+%mode push
+%mode string QQQ "`" "`" "\\"
+
+%define ENABLE_REGMAPPING
+
+%define REGMAPPGET `
+  map_select_getter('class_name', 'nde', 'SR', 1, 'str' , 'STRING')
+  map_select_getter('class_name', 'nde', 'R',  2, 'reg1', 'INTEGER')
+  map_select_getter('class_name', 'nde', 'R',  3, 'reg2', 'REAL')
+  map_select_getter('class_name', 'nde', 'PR', 4, 'pose', 'XYZWPR')
+`
+
+%define REGMAPPSET `
+  map_select_setter('class_name', 'nde', 'SR', 1, 'str' , 'STRING')
+  map_select_setter('class_name', 'nde', 'R',  2, 'reg1', 'INTEGER')
+  map_select_setter('class_name', 'nde', 'R',  3, 'reg2', 'REAL')
+  map_select_setter('class_name', 'nde', 'PR', 4, 'pose', 'XYZWPR')
+`
+
+%define define_itr_private_headers(parent) `
+declare_member(parent,set_null_array,parent,stnla)
+ROUTINE set_null_array(i : INTEGER) FROM parent
+declare_member(parent,set_null_nde,parent,stnln)
+ROUTINE set_null_nde FROM parent
+`
+
+%define define_itr_headers(parent) `
+declare_member(parent,is_null,parent,isnll)
+ROUTINE is_null : BOOLEAN FROM parent
+`
+
+%mode pop
+
+%mode push
+%mode string QQQ "`" "`" "\\"
+%define define_null_type(parent) `
+ROUTINE set_null_nde
+  VAR
+    uninitnde :  ITR_TYPE
+  BEGIN
+    nde = uninitnde
+  END set_null_nde
+
+ROUTINE set_null_array
+  VAR
+    uninitnde :  ITR_TYPE
+  BEGIN
+    this[i] = uninitnde
+  END set_null_array
+`
+
+%define define_is_null(parent) `
+ROUTINE is_null -- : BOOLEAN
+  BEGIN
+    IF (index > length) OR (index < 1) THEN
+      set_null_nde
+    ENDIF
+
+    RETURN(UNINIT(nde.str))
+  END is_null
+`
+
+--define tp interface with iterator
+%define ITER_TP_VARS `
+  func_ : INTEGER
+  tp_nde : ITR_TYPE
+`
+
+%define ITER_TP_INTERFACE `
+  --tpe class function
+  func_ = tpe__get_int_arg(1)
+
+  SELECT func_ OF
+    CASE(ITER_RESET):
+      new
+    CASE(ITER_PUSH):
+      tp_nde.str = tpe__get_string_arg(2)
+      tp_nde.reg1 = tpe__get_int_arg(3)
+      tp_nde.reg2 = tpe__get_real_arg(4)
+      tp_nde.pose = pose__get_posreg_xyz(tpe__get_int_arg(5), 1)
+
+      push(tp_nde)
+    CASE(ITER_POP):
+      tp_nde = pop
+      REGMAPPGET
+    CASE(ITER_INSERT):
+      tp_nde.str = tpe__get_string_arg(2)
+      tp_nde.reg1 = tpe__get_int_arg(3)
+      tp_nde.reg2 = tpe__get_real_arg(4)
+      tp_nde.pose = pose__get_posreg_xyz(tpe__get_int_arg(5), 1)
+
+      insert(tpe__get_int_arg(6), tp_nde)
+    CASE(ITER_GET):
+      set_index(tpe__get_int_arg(2))
+      REGMAPPGET
+    CASE(ITER_NEXT):
+      tp_nde = next
+      REGMAPPGET
+    CASE(ITER_PREV):
+      tp_nde = prev
+      REGMAPPGET
+    CASE(ITER_NULL):
+      registers__set_boolean(tpe__get_int_arg(2), is_null)
+    ELSE:
+  ENDSELECT
+`
+
+%mode pop
