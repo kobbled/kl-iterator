@@ -14,7 +14,9 @@
     "test/config/array"
   ],
   "tests" : [
-    "test/test_itr_arr.kl"
+    "test/test_itr_arr.kl",
+    "test/test_itr_pth.kl",
+    "test/test_iter_struct.tpp"
   ],
   "depends" : [
     "ktransw-macros",
