@@ -25,17 +25,17 @@ t_TSTCUSTOM FROM parent = STRUCTURE
 %mode push
 %mode string QQQ "`" "`" "\\"
 %define REGMAPPGET `
-  map_select_getter('class_name', 'nde', 'SR', 1, 'str' , 'STRING')
-  map_select_getter('class_name', 'nde', 'R',  2, 'reg1', 'INTEGER')
-  map_select_getter('class_name', 'nde', 'R',  3, 'reg2', 'REAL')
-  map_select_getter('class_name', 'nde', 'PR', 4, 'pose', 'XYZWPR')
+  map_select_getter('class_name', 'nde', 'SR', 1, 'str' , 'STRING', 1)
+  map_select_getter('class_name', 'nde', 'R',  2, 'reg1', 'INTEGER', 1)
+  map_select_getter('class_name', 'nde', 'R',  3, 'reg2', 'REAL', 1)
+  map_select_getter('class_name', 'nde', 'PR', 4, 'pose', 'XYZWPR', 1)
 `
 
 %define REGMAPPSET `
-  map_select_setter('class_name', 'nde', 'SR', 1, 'str' , 'STRING')
-  map_select_setter('class_name', 'nde', 'R',  2, 'reg1', 'INTEGER')
-  map_select_setter('class_name', 'nde', 'R',  3, 'reg2', 'REAL')
-  map_select_setter('class_name', 'nde', 'PR', 4, 'pose', 'XYZWPR')
+  map_select_setter('class_name', 'nde', 'SR', 1, 'str' , 'STRING', 1)
+  map_select_setter('class_name', 'nde', 'R',  2, 'reg1', 'INTEGER', 1)
+  map_select_setter('class_name', 'nde', 'R',  3, 'reg2', 'REAL', 1)
+  map_select_setter('class_name', 'nde', 'PR', 4, 'pose', 'XYZWPR', 1)
 `
 %mode pop
 

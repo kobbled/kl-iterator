@@ -9,7 +9,7 @@
 
 %define ENABLE_REGMAPPING
 %define REGMAPPGET `
-registerstp__get_karel_xyz('classname', 'pose_', 4)
+registerstp__get_karel_xyz('classname', 'pose_', 4, 1)
 `
 
 %define define_itr_private_headers `
