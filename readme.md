@@ -1,66 +1,208 @@
 [rossum]: https://github.com/kobbled/rossum
 [TP-Plus]: https://github.com/kobbled/tp_plus
 [Ka-Boost]: https://github.com/kobbled/Ka-Boost
+
 # Iterator
 
-FANUC KAREL interface for dealing with iterators. Also provides an interface for using PATHS, and ARRAYS in TP/TP+.
+Generic sequential collection with a stateful cursor for FANUC Karel programs — provides Array and Path backends with an identical traversal API, plus TP/TP+ callable interfaces.
 
-## Install
+## Overview
 
-* This package is a part of the larger library package [Ka-Boost]. Please install from there.
-* The package manager [rossum] is used to build all [Ka-Boost] packages. Read through the [rossum]( guide, and make sure [Ka-Boost], and this package are in the `ROSSUM_PKG_PATH` environment variable.
+Karel has no built-in iterators, lists, or generics. `iterator` fills that gap with two GPP-template-based collection classes:
 
-## Building
+- **Array iterator** — backed by a fixed `ARRAY[N]`, no wrapping required for atomic types, compile-time capacity.
+- **Path iterator** — backed by a Karel `PATH` (dynamic linked list), runtime-resizable, but atomic types must be wrapped in a struct because `PATH nodedata` requires a structure type.
 
-<details>
-  <summary>Click to Reveal</summary>
-  
-* Open the _Iteraror_ root folder in a terminal.
-* Set your roboguide configuration with:
-```bat
-del /f robot.ini
-setrobot
+Both share the same traversal API (`push`, `pop`, `next`, `prev`, `set_index`, `get_index`, `get`, `len`, `is_empty`, `is_null`). A `.klt` configuration file drives all generic expansion — you supply the element type, null-handling macros, and optional TP register mappings once; the class template does the rest.
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `lib/array/iteratorarray.klc` | Array iterator class body (GPP template) |
+| `lib/array/iteratorarray.klh` | Public routine declarations for array backend |
+| `lib/array/iteratorarray.tpp` | TP+ namespace `Iterarr` — enum constants for TP dispatch |
+| `lib/path/iteratorpath.klc` | Path iterator class body (GPP template) |
+| `lib/path/iteratorpath.klh` | Public routine declarations for path backend |
+| `lib/path/iteratorpath.tpp` | TP+ namespace `Iterpath` — enum constants for TP dispatch |
+| `test/config/array/default_int_array.klt` | Example config: INTEGER in Array |
+| `test/config/array/default_custom_array.klt` | Example config: custom struct in Array |
+| `test/config/path/default_int_path.klt` | Example config: INTEGER wrapped in `t_INTEGER` for Path |
+| `test/config/path/default_path_path.klt` | Example config: XYZWPR wrapped in `t_POSE` for Path |
+| `test/config/path/default_custom_path.klt` | Example config: custom struct in Path |
+| `test/test_itr_arr.kl` | KUnit tests for array backend |
+| `test/test_itr_pth.kl` | KUnit tests for path backend |
+| `test/test_iter_struct.tpp` | TP+ integration tests for both backends |
+
+## API Reference
+
+### Common Methods (Array and Path)
+
+```karel
+ROUTINE new FROM class_name
+-- Initialize: set cursor to 1, clear storage, nullify scratch variable
+
+ROUTINE delete FROM class_name
+-- Reset cursor to 0, clear storage
+
+ROUTINE push(n : ITR_TYPE) FROM class_name
+-- Append item to end. Error if array is full.
+
+ROUTINE pop : ITR_TYPE FROM class_name
+-- Remove and return last item. Returns null sentinel if empty.
+
+ROUTINE next : ITR_TYPE FROM class_name
+-- Return item at current cursor, then increment.
+-- Returns null sentinel when cursor moves past end.
+
+ROUTINE prev : ITR_TYPE FROM class_name
+-- Return item at current cursor, then decrement.
+-- Returns null sentinel when cursor moves before start.
+
+ROUTINE get : ITR_TYPE FROM class_name
+-- Return item at current cursor without moving it.
+
+ROUTINE get_index(i : INTEGER) : ITR_TYPE FROM class_name
+-- Return item at index i without moving cursor. Supports negative indices.
+
+ROUTINE set_index(i : INTEGER) FROM class_name
+-- Move cursor to i. Negative indices: -1 = last, -2 = second-to-last, etc.
+
+ROUTINE insert(index_ : INTEGER; n : ITR_TYPE) FROM class_name
+-- Insert item at index_, shift remaining items right.
+
+ROUTINE is_empty : BOOLEAN FROM class_name
+-- TRUE if collection has no items.
+
+ROUTINE is_null : BOOLEAN FROM class_name
+-- TRUE if cursor is out of bounds OR current item is uninitialized.
+-- Exact check is defined per-config via define_is_null macro.
+
+ROUTINE len : INTEGER FROM class_name
+-- Number of items currently stored.
 ```
-* Create a build directory
-```bat
-mkdir build
-cd build
-```
-* Build all tests, and send to robot
-```bat
-rossum .. -w -o -t
-ninja
-kpush
-```
-</details>
 
-## Usage
+### Path-Only Methods
 
-Iterators can be specified as either `Arrays`, or `Paths`. Declaring an array can be done with:
+```karel
+ROUTINE take(i : INTEGER; out_pth : PATH nodedata = ITR_TYPE) FROM class_name
+-- COPY_PATH from current index for i nodes into out_pth.
 
-```
-%class <obj_name>('iteratorarray.klc','iteratorarray.klh','<array_config_filename>.klt')
-```
-where `<obj_name>` should be replaced with the object name determined by the user. And `<array_config_filename>` should be replaced with the correct configuration file.
-
-> [!**NOTE**]
-> An `Array` type size is statically allocated, and cannot be made larger during runtime. A `Path` type size is dynamically allocated and can be made larger or smaller during runtime. An index is used to keep track of how many items have been pushed onto an `Array`; however, if you run out of room in the arry you will ahve to resize it.
-
-Declaring a path can be done with:
-
-```
-%class <obj_name>('iteratorpath.klc','iteratorpath.klh','<path_config_filename>.klt')
+ROUTINE skip(i : INTEGER) : ITR_TYPE FROM class_name
+-- Advance cursor i positions and return item at new position.
 ```
 
-The defined item type can be added and removed from the iterator with `<obj_name>__push` / `<obj_name>__pop` commands. The iterator can be traversed with `<obj_name>__next` / `<obj_name>__prev` commands. The index pointer can be changed with `<obj_name>__set_index(<new_index>)`. And the current index can be returned with `<obj_name>__get`.
+### Wrap / Unwrap Methods (Path only, config-defined)
 
->[!**IMPORTANT**]
-> `Path` items cannot be directly set to atomic types (i.e. INTEGER, REAL, BOOLEAN, STRING, etc ...). A support file `systemlib.type.klt` from [kl-system](https://github.com/kobbled/kl-system) can be used to obfuscate the usage of atomic types in paths. In the configuration file you will notice a `ITR_TYPE` and `ITR_UNWRAP_TYPE` variable to expose the underlying type to the interface.
+Path iterators for atomic types need a wrapper struct. The config generates these methods:
 
-Custom structs can be be declared either directly within the iterator object using the `ITER_STRUCT` argument, or can be included from an external file with the `ITER_STRUCT_IMPORT` argument.
+```karel
+ROUTINE wrap(value : ITR_UNWRAP_TYPE) FROM class_name
+-- Construct ITR_TYPE struct from native value and push.
 
-Iterator objects can also be used in TP/TP+ programs. See **test/test_iter_struct.tpp** for usage. To retrieve the data in the iterator the item struct will be mapped to TP registers (see **test/test_regmap.kl** [kl-registers](https://github.com/kobbled/kl-registers) for using register mapping outside of an iterator). These mappings are defined in each configuration file using the `REGMAPPGET` macro. For example a custom struct can be mapped to various registers like:
+ROUTINE wrap_insert(index_ : INTEGER; value : ITR_UNWRAP_TYPE) FROM class_name
+-- Construct ITR_TYPE struct and insert at index_.
 
+ROUTINE unwrap : ITR_UNWRAP_TYPE FROM class_name
+-- Extract native value from current node (nde).
+
+ROUTINE unwrap_pop : ITR_UNWRAP_TYPE FROM class_name
+-- pop, then extract native value.
+
+ROUTINE unwrap_next : ITR_UNWRAP_TYPE FROM class_name
+-- next, then extract native value.
+
+ROUTINE unwrap_prev : ITR_UNWRAP_TYPE FROM class_name
+-- prev, then extract native value.
+
+ROUTINE unwrap_from(n : ITR_TYPE) : ITR_UNWRAP_TYPE FROM class_name
+-- Extract native value from any node (not just current).
+```
+
+### TP+ Dispatch Enums
+
+Both `Iterarr` and `Iterpath` namespaces export the same constants:
+
+| Constant | Value |
+|----------|-------|
+| `RESET` | 1 |
+| `PUSH` | 2 |
+| `POP` | 3 |
+| `INSERT` | 4 |
+| `GET` | 5 |
+| `NEXT` | 6 |
+| `PREV` | 7 |
+| `ISNULL` | 8 |
+
+---
+
+## Common Patterns
+
+### Pattern 1: Integer Array — Basic Use
+
+The simplest case. Use when you know the maximum size at compile time and don't need dynamic resizing.
+
+```karel
+-- Instantiation (three-arg %class: implementation, header, config)
+%class myarr('iteratorarray.klc','iteratorarray.klh','default_int_array.klt')
+
+-- In a routine:
+myarr__new
+myarr__push(10)
+myarr__push(20)
+myarr__push(30)
+
+-- Forward traversal (is_null checks bounds AND initialization)
+WHILE NOT myarr__is_null DO
+  val = myarr__next
+  -- process val
+ENDWHILE
+
+myarr__delete
+```
+
+### Pattern 2: Integer Path — Wrap/Unwrap for Atomic Types
+
+Karel `PATH nodedata` must be a struct. Use `wrap`/`unwrap` to hide this detail.
+The config defines `t_INTEGER { v : INTEGER }` behind the scenes.
+
+```karel
+%class mypath('iteratorpath.klc','iteratorpath.klh','default_int_path.klt')
+
+mypath__new
+mypath__wrap(5)     -- wraps INTEGER 5 into t_INTEGER, appends to PATH
+mypath__wrap(10)
+mypath__wrap(15)
+
+-- unwrap_next = next() then extract .v field
+WHILE NOT mypath__is_null DO
+  val = mypath__unwrap_next   -- returns INTEGER directly
+ENDWHILE
+```
+
+### Pattern 3: XYZWPR Pose Path
+
+`default_path_path.klt` wraps `XYZWPR` into `t_POSE { v : XYZWPR }`.
+
+```karel
+%class posepath('iteratorpath.klc','iteratorpath.klh','default_path_path.klt')
+
+posepath__new
+posepath__wrap(POS(0,80,0,0,0,0,(ZEROPOS(1).Config_data)))
+posepath__wrap(POS(48,64,10,0,0,0,(ZEROPOS(1).Config_data)))
+posepath__wrap(POS(77,21,20,0,0,0,(ZEROPOS(1).Config_data)))
+
+WHILE NOT posepath__is_null DO
+  current_pose = posepath__unwrap_next   -- returns XYZWPR
+  -- use current_pose
+ENDWHILE
+```
+
+### Pattern 4: Custom Struct in Path with TP Register Mapping
+
+When you need to read iterator data from TP programs, map struct fields to registers in the config via `REGMAPPGET`. Calling `unwrap_next` then automatically populates those registers.
+
+**In your config `.klt`:**
 ```c
 %define REGMAPPGET `
   map_select_getter('class_name', 'nde', 'SR', 1, 'str' , 'STRING')
@@ -70,80 +212,70 @@ Iterator objects can also be used in TP/TP+ programs. See **test/test_iter_struc
 `
 ```
 
-Each line item refers to each member of the struct. The last 4 arguments need to be modified. Argument 3 is the register type to map the struct member to('R', 'PR', 'SR', 'F', 'DO', etc..). Argument 4 is the register number. argument 5 is the name of the member in the struct, and Argument 6 is the type of the struct member. 
+**In Karel:**
+```karel
+%class mydata('iteratorpath.klc','iteratorpath.klh','my_custom_config.klt')
 
->[!NOTE]
-> TP functionality can be disabled and excluded from the configuration file by removing the `ENABLE_REGMAPPING` macro.
+mydata__new
+mydata__wrap('hello', 1, 3.14, POS(0,80,0,0,0,0,(ZEROPOS(1).Config_data)))
+mydata__wrap('world', 23, 6.28, POS(48,64,10,0,0,0,(ZEROPOS(1).Config_data)))
 
-For atomic type items `REGMAPPGET` must be defined with the appropriate getter function from `registerstp.klh` in [kl-registers](https://github.com/kobbled/kl-registers). For example setting the `int_` variable in the iterator object to `R[2]` can be done as so: 
-
-```
-%define REGMAPPGET `
-registerstp__get_karel_int('classname', 'int_', 2)
-`
-```
-
-### Creating Configuration files
-
-Example configuration files are found in **test/config/array**, or **test/config/path**.
-
-First define the user struct, or import file, and set `ITR_TYPE` (and `ITR_UNWRAP_TYPE` when using a path). 
-
-#### Paths
-
-When defining defining the user interface functions for path types, you will notice a bunch of `unwrap` functions in `define_itr_headers`:
-
-```c
-%define define_itr_headers(parent) `
-declare_member(parent,is_null,parent,isnll)
-ROUTINE is_null : BOOLEAN FROM parent
-declare_member(parent,wrap,parent,wrap)
-ROUTINE wrap(str : STRING; reg1 : INTEGER; reg2 : REAL; pose : XYZWPR) FROM parent
-declare_member(parent,wrap_insert,parent,wrpin)
-ROUTINE wrap_insert(index_ : INTEGER; str : STRING; reg1 : INTEGER; reg2 : REAL; pose : XYZWPR) FROM parent
-declare_member(parent,unwrap,parent,unwrp)
-ROUTINE unwrap FROM parent
-declare_member(parent,unwrap_pop,parent,uwpop)
-ROUTINE unwrap_pop FROM parent
-declare_member(parent,unwrap_next,parent,uwnxt)
-ROUTINE unwrap_next FROM parent
-declare_member(parent,unwrap_prev,parent,uwprv)
-ROUTINE unwrap_prev FROM parent
-`
+WHILE NOT mydata__is_null DO
+  mydata__unwrap_next                          -- populates SR[1], R[2], R[3], PR[4]
+  str_val  = registers__get_string(1)
+  int_val  = registers__get_int(2)
+  real_val = registers__get_real(3)
+  pose_val = pose__get_posreg_xyz(4, 1)
+ENDWHILE
 ```
 
-These functions transform output of the base class functions (push,pop,next,prev) to the unwrap type `ITR_UNWRAP_TYPE`, or for the user struct example map the struct to a register set on the teach pendant.
+### Pattern 5: Negative Index Access / Backward Traversal
 
-`ITER_TP_INTERFACE` macro is what needs to be filled out to use iterator object in TP programs. The contents gets placed in the entry point of the class, where different function members will be called through a select block. In **test/test_iter_struct.tpp** function call can be seen as:
+Both backends support Python-style negative indexing.
 
-**TP+**
+```karel
+-- After pushing 5 elements:
+myarr__set_index(-1)    -- move cursor to last element (index 5)
+val = myarr__get        -- returns element 5 without advancing
+
+myarr__set_index(-2)    -- move cursor to second-to-last
+val = myarr__get
+
+-- Backward traversal from end:
+myarr__set_index(-1)
+WHILE NOT myarr__is_null DO
+  val = myarr__prev     -- returns current, then decrements
+ENDWHILE
+```
+
+### Pattern 6: TP+ / TP Dispatch
+
+Iterator objects can be called from TP programs via a select-case dispatch. The config's `ITER_TP_INTERFACE` macro defines the dispatch body.
+
+**In your `.tpp` file:**
 ```ruby
+.require iteratorpath
+
+-- Reset iterator
+tstist(Iterpath::RESET)
+
+-- Push custom struct fields as TP arguments
 tstist(Iterpath::PUSH, 'hello', 1, 3.14, &poseset)
+
+-- Get next item (result written to registers via REGMAPPGET)
+tstist(Iterpath::NEXT)
+str_val = SR[1]
+num_val = R[2]
+
+-- Check null → result written to a flag register
+check := F[20]
+check = tstist(Iterpath::ISNULL)
 ```
 
-where the first arugment is the function to run. This enum is defined in **lib/path/iteratorpath.tpp**, and is defined in the karel class as:
-
-**KAREL**
-```c
-CONST
-  --tp functions
-  ITER_RESET  = 1
-  ITER_PUSH   = 2
-  ITER_POP    = 3
-  ITER_INSERT = 4
-  ITER_GET    = 5
-  ITER_NEXT   = 6
-  ITER_PREV   = 7
-  ITER_NULL   = 8
-```
-
-The next arguments vary based on the function that is being called. For the `t_INTEGER` path type defined in **default_int_path.klt**, `ITER_TP_INTERFACE` is defined as:
-
+**Corresponding `ITER_TP_INTERFACE` in config (for INTEGER path):**
 ```c
 %define ITER_TP_INTERFACE `
-  --tpe class function
   func_ = tpe__get_int_arg(1)
-
   SELECT func_ OF
     CASE(ITER_RESET):
       new
@@ -151,12 +283,6 @@ The next arguments vary based on the function that is being called. For the `t_I
       wrap(tpe__get_int_arg(2))
     CASE(ITER_POP):
       int_ = unwrap_pop
-      REGMAPPGET
-    CASE(ITER_INSERT):
-      wrap_insert(tpe__get_int_arg(3), tpe__get_int_arg(2))
-    CASE(ITER_GET):
-      set_index(tpe__get_int_arg(2))
-      int_ = unwrap
       REGMAPPGET
     CASE(ITER_NEXT):
       int_ = unwrap_next
@@ -171,40 +297,73 @@ The next arguments vary based on the function that is being called. For the `t_I
 `
 ```
 
-where `tpe__get_int_arg(2)` is passing the integer argument from the TP call into the object, and `REGMAPPGET` is handling the return by pop, get, next, and prev, mapping it to a number register.
+---
 
-For a custom struct arugments are handled like so:
+## Creating a Configuration File
 
-```c
-CASE(ITER_PUSH):
-    tp_nde.str = tpe__get_string_arg(2)
-    tp_nde.reg1 = tpe__get_int_arg(3)
-    tp_nde.reg2 = tpe__get_real_arg(4)
-    tp_nde.pose = pose__get_posreg_xyz(tpe__get_int_arg(5), 1)
+Copy the closest example from `test/config/` and modify:
 
-    wrap(tp_nde.str, tp_nde.reg1, tp_nde.reg2, tp_nde.pose)
+### Array Config Checklist
+
+1. Define your element type: `%define ITR_TYPE INTEGER` (or a struct)
+2. Set capacity: `%define ARRAY_SIZE 10`
+3. Define `set_null_array` — clears backing array elements
+4. Define `set_null_nde` — clears the scratch variable `nde`
+5. Define `define_is_null(parent)` — body of `is_null` routine
+6. Define `ITER_TP_VARS` — extra variables for TP dispatch (`func_`, plus one per return type)
+7. Define `REGMAPPGET` — how to write `nde` to registers (for TP retrieval)
+8. Define `ITER_TP_INTERFACE` — select-case dispatch for TP callers
+9. Omit `ENABLE_REGMAPPING` if TP integration is not needed
+
+### Path Config Checklist
+
+1. Define struct for PATH nodedata: `%define ITR_TYPE t_MYTYPE`
+2. Define `ITR_UNWRAP_TYPE` — native type exposed by `unwrap_*` routines
+3. Define `set_null` — returns an uninitialized `ITR_TYPE` (used as sentinel)
+4. Define `define_is_null(parent)` — checks `UNINIT(nde.<key_field>)` or index bounds
+5. Define `define_itr_headers(parent)` — header declarations for wrap/unwrap routines
+6. Define wrap/unwrap implementation macros
+7. Define `ITER_TP_VARS`, `REGMAPPGET`, `ITER_TP_INTERFACE` (if TP needed)
+
+---
+
+## Common Mistakes
+
+| Mistake | Symptom | Fix |
+|---------|---------|-----|
+| Using an atomic type (INTEGER, REAL) as `ITR_TYPE` for a Path iterator | Karel compile error — PATH nodedata requires a structure | Wrap the atomic in a struct (`t_INTEGER { v : INTEGER }`) and set `ITR_UNWRAP_TYPE` to the atomic type |
+| Not calling `new` before first use | `is_null` returns TRUE immediately; `push` may corrupt storage | Always call `__new` before any other method |
+| Forgetting `ARRAY_SIZE` in array config | Zero or undefined capacity; `push` errors immediately | Set `ARRAY_SIZE` to the maximum expected count |
+| Defining only `set_null_array` or only `set_null_nde` (not both) in array config | Stale data appears after `new` is called; `is_null` misbehaves | Both macros are required — they reinitialize the array and the scratch variable independently |
+| Reading one element past end (no `is_null` guard) | Last iteration returns the uninitialized null sentinel | Use `WHILE NOT myobj__is_null DO ... val = myobj__next` pattern |
+| Using `map_select_getter` in `REGMAPPGET` for an atomic `ITR_TYPE` | Compile error or wrong register at runtime | For atomic types, use `registerstp__get_karel_int/real/string/xyz` directly |
+| Calling `take` or `skip` on an Array iterator | Compile error — those methods only exist in the Path variant | Use `get_index` for random access in Array; switch to Path backend if you need `take`/`skip` |
+
+---
+
+## Build Flow
+
+The iterator module produces no `.pc` binary of its own. The `%class` directive expands the template inline into your program at compile time.
+
+```shell
+# From your module (which depends on iterator):
+cd lib/<your_module>
+del /f robot.ini && setrobot
+mkdir build && cd build
+rossum .. -w -o          # resolves iterator as a dependency
+ninja                    # compiles — iterator code is inlined
+kpush                    # deploy .pc to controller
 ```
 
-where each TP argument is mapped into the user struct, and then passed through into the member function.
+To build the iterator tests directly:
 
-checking if the iterator is null (i.e. `ITER_NULL`), the result must be passed to a io flag. This is done in TP+ by:
-
-```ruby
-check := F[1]
-check = tstist(Iterpath::ISNULL)
+```shell
+cd lib/iterator
+del /f robot.ini && setrobot
+mkdir build && cd build
+rossum .. -w -o -t       # include test programs
+ninja
+kpush
 ```
 
-#### Arrays
-
-The configuration files for array will be simpiler than for paths. No `unwrap` methods are needed, as atomic types can be set as the array type. The array is sized with the `ARRAY_SIZE` macro.  
-
-`set_null` is split into two functions `set_null_array`, and `set_null_nde`. make sure to set both for it to function properly. 
-
-Set an extra return variable in `ITER_TP_VARS` for storing the result of push, next, prev etc.. for example **default_int_array.klt** defines `int_` to store the result, which is then used in `REGMAPPGET` to map to a register:
-
-```c
-%define ITER_TP_VARS `
-  func_ : INTEGER
-  int_ : ITR_TYPE
-`
-```
+See the top-level [Ka-Boost] readme for full build and environment setup instructions.
